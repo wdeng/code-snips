@@ -144,7 +144,7 @@ class DataProstate(BaseData):
 
         ## TODO: add weights to the loss
         # weight = np.ones([dim_y, dim_x, lb_num], dtype='float32')
-        data, lbs = self.make_transforms(data, 3, lbs)
+        data, lbs = self.make_transforms(data, 1, lbs)
 
         lbs, coords = lbs[...,:lb_num], lbs[...,-2:]
         ## coords are the guiding pixels for 
