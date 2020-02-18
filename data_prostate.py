@@ -7,7 +7,7 @@ from collections import namedtuple
 
 import sys
 # sys.path.append(os.path.abspath('../'))
-import wdeng_libs.transform_2d as trans
+import prostate_seg.transform_2d as trans
 
 from skimage import io, color
 import numpy as np
@@ -114,6 +114,7 @@ class DataProstate(BaseData):
             p = os.path.join(path, n)
             if os.path.isdir(p):
                 self.basenames.append(p)
+        self.thresholding = trans.ThresholdToBinary()
         
         # if ids: self.basenames = [self.basenames[idx] for idx in ids]
     
@@ -137,6 +138,7 @@ class DataProstate(BaseData):
 
         lbnames = ['Prostate.jpg', 'Bladder.jpg', 'PenileBulb.jpg', 'Rectum.jpg']
         lb_num = len(lbnames)
+        print(basepath)
 
         lbs = [(io.imread(os.path.join(basepath, n)) > 128).astype('float32') for n in lbnames]
         lbs += self.cartesian_position(dim_y, dim_x) ## coordinates
@@ -149,6 +151,8 @@ class DataProstate(BaseData):
         lbs, coords = lbs[...,:lb_num], lbs[...,-2:]
         ## coords are the guiding pixels for 
         data = np.concatenate([data, coords], axis=2)
+
+        lbs = self.thresholding(lbs)
 
         sample = {
             'data': self.to_tensor(data.astype('float32')),

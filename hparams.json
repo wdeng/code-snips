@@ -1,0 +1,24 @@
+{
+	"learning_rate": {
+		"lr": 1e-3,
+		"beta1": 0.5,
+		"scheduler_": "ReduceLROnPlateau",
+		"scheduler_params_": {
+			"patience": 30,
+			"threshold": 0.01
+		}
+	},
+	"batch_size": 16,
+	"crop_size": [256, 256],
+	"input_channels": 3,
+	"class_num": 4,
+	"output_func": "Sigmoid",
+	"use_loss_weights":false,
+	"resume_path": "",
+	"checkpoint_path": "./pretrained/res-fpn",
+	"use_eval_set": true,
+	"optimizer": "Adam",
+	"total_iterations": 500,
+	"save_iterations": 5,
+	"use_gpu": true
+}

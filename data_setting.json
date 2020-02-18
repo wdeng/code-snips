@@ -1,0 +1,5 @@
+{
+	"mode": "train-eval",
+	"train_path": "/2d_images/train",
+	"val_path": "/2d_images/val"
+}
