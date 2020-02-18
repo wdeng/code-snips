@@ -230,10 +230,10 @@ class ModelTrain(object):
 
         running_loss /= iters
 
-        if len(im_names) > 0 and write_path is not None:
-            for i, im in enumerate(results):
-                write_output(im, im_names[i] + '.in', write_path)
-                write_output(im, im_names[i] + '.out', write_path)
+        #if len(im_names) > 0 and write_path is not None:
+        #    for i, im in enumerate(results):
+        #        write_output(im, im_names[i] + '.in', write_path)
+        #        write_output(im, im_names[i] + '.out', write_path)
             
         self.validate_hard_dice(results, refs, kwargs)
         
