@@ -15,7 +15,7 @@ from torchvision.transforms import Compose
 from torch.utils.tensorboard import SummaryWriter
 
 import sys
-sys.path.append(os.path.abspath('./'))
+sys.path.append(os.path.abspath('../'))
 from prostate_seg.data_prostate import DataProstate, json2obj
 import prostate_seg.transform_2d as trans
 from prostate_seg.trainer import ModelTrain as Trainer
@@ -116,7 +116,7 @@ def main():
     hps = json2obj(hp_data)
     dts = json2obj(path_data)
 
-    net = UNet(hps.input_channels, hps.class_num, output_func='Sigmoid', pretrained=True)
+    net = UNet(hps.input_channels, hps.class_num, output_func='Sigmoid', pretrained=False)
 
     try:
         train(net, hps, dts)
