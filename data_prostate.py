@@ -4,7 +4,7 @@ import math
 import re
 
 import sys
-sys.path.append('./)
+sys.path.append('./')
 import transform_2d as trans
 
 from skimage import io, color
