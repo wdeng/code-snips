@@ -2,8 +2,8 @@
 	"learning_rate": {
 		"lr": 1e-3,
 		"beta1": 0.5,
-		"scheduler_": "ReduceLROnPlateau",
-		"scheduler_params_": {
+		"scheduler": "ReduceLROnPlateau",
+		"scheduler_params": {
 			"patience": 30,
 			"threshold": 0.01
 		}
