@@ -207,8 +207,7 @@ class RandomCrop(object):
         top = np.random.randint(0, height - new_height)
         left = np.random.randint(0, width - new_width)
 
-        sample = sample[top: top + new_height,
-                        left: left + new_width]
+        sample = sample[top: top + new_height, left: left + new_width, ...]
 
         return sample
 

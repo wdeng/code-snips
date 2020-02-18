@@ -26,6 +26,8 @@ from skimage.measure import find_contours
 from scipy.ndimage import distance_transform_edt
 from skimage.morphology import watershed
 
+from torch.utils.tensorboard import SummaryWriter
+
 EPS = 1E-6
 def dice(im1, im2):
     """
@@ -60,23 +62,12 @@ def dice(im1, im2):
 
     return 2. * (intersection.sum()+EPS) / (im1.sum() + im2.sum() + EPS)
 
-def post_watershed_slow(seeds, mask):
-    mask = remove_small_objects(remove_small_holes(mask > 0.5, 8000), 200)
-    seeds = remove_small_objects(remove_small_holes(seeds > 0.8, 5000), 20)
-    seeds = seeds & mask
-
-    distance = -1 * distance_transform_edt(mask)
-    labels = label(seeds)
-    segs = watershed(distance, labels, mask=mask)
-    return segs
-
 def normalize(im):
     im_min, im_max = np.min(im), np.max(im)
     return (im - im_min) / (im_max - im_min)
 
 def write_output(ims, name, path='./', norm=True):
-    if not os.path.exists(path):
-        os.mkdir(path)
+    os.makedirs(path, exist_ok=True)
     path_ = os.path.join(path, name)
     for idx, im in enumerate(ims):
         if type(im) is torch.Tensor:
@@ -85,6 +76,10 @@ def write_output(ims, name, path='./', norm=True):
         im = normalize(im) if norm else im
         io.imsave(fname, im)
 
+def post_light(mask):
+    mask = remove_small_objects(mask > 0.5, 10)
+    mask = remove_small_holes(mask, 1000)
+    return mask
 
 def load_checkpoint(resume_path, model, optimizer):
     if os.path.isfile(resume_path):
@@ -99,27 +94,6 @@ def load_checkpoint(resume_path, model, optimizer):
     else:
         print("=> no checkpoint found at '{}'".format(resume_path))
     return best_loss, epoch_start
-
-
-def get_roc(predicts, truths):
-    '''
-    must be (c, n, w, d)
-    '''
-    class_n = truths.shape[0]
-    if truths.dtype != 'bool':
-        truths = truths > 0.1
-
-    fpr = dict()
-    tpr = dict()
-    thre = dict()
-    roc_auc = dict()
-    for i in range(class_n):
-        fpr[i], tpr[i], thre[i] = roc_curve(
-            truths[i].ravel(), predicts[i].ravel())
-        roc_auc[i] = auc(fpr[i], tpr[i])
-
-    return fpr, tpr, roc_auc, thre
-
 
 def save_checkpoint(states, path, filename='model_latest'):
     if not os.path.exists(path):
@@ -229,45 +203,7 @@ class ModelTrain(object):
         running_loss /= iters
         return running_loss
 
-    def validate_with_auc(self, device=None, output_func='none', write_path=None):
-        assert hasattr(self, 'evaloader')
-        if device is None:
-            device = self.device
-        running_loss, iters = 0.0, 0
-        self.model.eval()
-        results = []
-        refs = []
-        im_names = []
-        with torch.no_grad():
-            for _, sample in enumerate(self.evaloader):
-                inputs, labels = sample['data'].to(
-                    device), sample['labels'].to(device)
-                if 'img_name' in sample:
-                    im_names += sample['img_name']
-                if 'weights' in sample:
-                    self.loss_func.weight = sample['weights'].to(device)
-                outputs = self.model(inputs)
-                loss = self.loss_func(outputs, labels)
-                running_loss += loss.item()
-                if hasattr(F, output_func):
-                    outputs = getattr(F, output_func)(outputs)
-                results += list(outputs.cpu().numpy())
-                refs += list(labels.cpu().numpy())
-                iters += 1
-
-        running_loss /= iters
-
-        if len(im_names) > 0 and write_path is not None:
-            for i, r in enumerate(results):
-                write_output(r, im_names[i] + '.out', write_path)
-
-        results = np.swapaxes(np.array(results), 0, 1)
-        refs = np.swapaxes(np.array(refs), 0, 1)
-
-        _, _, aucs, _ = get_roc(results, refs)
-        return running_loss, aucs
-
-    def validate(self, device=None, output_func='none'):
+    def validate(self, device=None, output_func='none', write_path=None, **kwargs):
         assert hasattr(self, 'evaloader')
         if device is None:
             device = self.device
@@ -294,9 +230,27 @@ class ModelTrain(object):
 
         running_loss /= iters
 
-        images = {
-            'ref': refs,
-            'result': results,
-            'names': im_names
-        }
-        return running_loss, images
+        if len(im_names) > 0 and write_path is not None:
+            for i, im in enumerate(results):
+                write_output(im, im_names[i] + '.in', write_path)
+                write_output(im, im_names[i] + '.out', write_path)
+            
+        self.validate_hard_dice(results, refs, kwargs)
+        
+        return running_loss
+    
+    def validate_hard_dice(self, results, ref_masks, epoch=0, writer=None):
+        dices = [0]*4
+        n_im = len(results)
+        for i, r in enumerate(results):
+            for j, pred in enumerate(r):
+                dices += dice(remove_small_holes(pred > 0.5, 1000), ref_masks[i][j]) / n_im
+        
+        if writer:
+            assert isinstance(writer, SummaryWriter)
+            writer.add_scalars('val/hard_dices', {
+                'prostate': dices[0], 
+                'bladder': dices[1],
+                'penile_bulb': dices[2],
+                'rectum': dices[3]
+            }, epoch)
