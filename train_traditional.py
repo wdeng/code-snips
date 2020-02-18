@@ -50,12 +50,12 @@ def train(net, hps, dts):
     transforms_t[-1].target = 'data'
 
     transforms_t.append(Compose([
-        trans.RandomElastic(alpha=(0, 25), sigma=16),
+        trans.RandomElastic(alpha=(0, 16), sigma=18),
     ]))
     transforms_t[-1].target = 'both'
     
     transforms_t.append(Compose([
-        trans.RandomBlur(sigmas=(0.0, 8.0)), 
+        trans.RandomBlur(sigmas=(0.0, 5.0)), 
     ]))
     transforms_t[-1].target = 'data'
 
